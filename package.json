@@ -3,11 +3,11 @@
   "displayName": "Brainrot Runners",
   "description": "An endless 3-lane runner inside a VS Code webview panel.",
   "version": "0.0.1",
-  "publisher": "brainrot-dev",
+  "publisher": "JosephTinkler",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/brainrot-dev/brainrot-runners.git"
+    "url": "https://github.com/JosephTinkler/BrainrotRunner.git"
   },
   "engines": {
     "vscode": "^1.85.0"
