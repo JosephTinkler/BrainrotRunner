@@ -1,0 +1,8 @@
+# Allowlist: exclude everything, then re-include only what the extension needs at runtime.
+**
+!dist/**/*.js
+!media/**
+!package.json
+!README.md
+!CHANGELOG.md
+!LICENSE

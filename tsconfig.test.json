@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node",
+    "ignoreDeprecations": "6.0",
+    "lib": ["ES2022"],
+    "noEmit": false,
+    "outDir": "out",
+    "rootDir": ".",
+    "sourceMap": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "types": ["node", "mocha"]
+  },
+  "include": ["test/integration/**/*.ts"]
+}
