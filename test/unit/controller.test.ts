@@ -261,6 +261,23 @@ describe('GameController visibility', () => {
     expect(ui.showPause).toHaveBeenCalled();
   });
 
+  it('a pause message from the host pauses a running game', () => {
+    const { controller, ui } = setup();
+    init(controller);
+    controller.onCommand('confirm');
+    controller.handleHostMessage({ type: 'pause' });
+    expect(controller.state.phase).toBe('paused');
+    expect(ui.showPause).toHaveBeenCalled();
+  });
+
+  it('a pause message does nothing when no run is active', () => {
+    const { controller, ui } = setup();
+    init(controller);
+    controller.handleHostMessage({ type: 'pause' });
+    expect(controller.state.phase).toBe('title');
+    expect(ui.showPause).not.toHaveBeenCalled();
+  });
+
   it('hiding the panel does nothing when no run is active', () => {
     const { controller, ui } = setup();
     init(controller);

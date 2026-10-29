@@ -27,10 +27,38 @@
   "main": "./dist/extension.js",
   "activationEvents": [],
   "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "brainrotRunners",
+          "title": "Brainrot Runners",
+          "icon": "media/sidebar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "brainrotRunners": [
+        {
+          "type": "webview",
+          "id": "brainrotRunners.sidebar",
+          "name": "Play"
+        }
+      ]
+    },
+    "menus": {
+      "view/title": [
+        {
+          "command": "brainrotRunners.play",
+          "when": "view == brainrotRunners.sidebar",
+          "group": "navigation"
+        }
+      ]
+    },
     "commands": [
       {
         "command": "brainrotRunners.play",
-        "title": "Brainrot Runners: Play"
+        "title": "Brainrot Runners: Play",
+        "icon": "$(link-external)"
       },
       {
         "command": "brainrotRunners.showHighScores",

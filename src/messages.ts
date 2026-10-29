@@ -1,6 +1,8 @@
 /** Shared typed message contracts between the extension host and the webview. */
 
 export const VIEW_TYPE = 'brainrotRunners.game';
+/** The Activity Bar sidebar view. Must match `contributes.views` in package.json. */
+export const SIDEBAR_VIEW_ID = 'brainrotRunners.sidebar';
 
 export interface HighScoreEntry {
   score: number;
@@ -29,4 +31,6 @@ export type HostToWebview =
       settings: Settings;
       view?: 'title' | 'highScores';
     }
-  | { type: 'highScores'; list: HighScoreEntry[]; newRank?: number };
+  | { type: 'highScores'; list: HighScoreEntry[]; newRank?: number }
+  /** The webview was hidden by the host; pause a run in progress. */
+  | { type: 'pause' };

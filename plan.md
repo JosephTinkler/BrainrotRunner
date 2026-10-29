@@ -116,9 +116,13 @@ BrainrotRunner/
 
 ## 8. Extension Host ↔ Webview
 **Commands (package.json `contributes.commands`)**
-- `brainrotRunners.play`: open or reveal the game panel.
+- `brainrotRunners.play`: open or reveal the game panel (editor tab).
 - `brainrotRunners.showHighScores`: open the panel on the high-score screen.
 - `brainrotRunners.resetHighScores`: clear the high scores, after a confirmation modal.
+
+**Sidebar view (`contributes.viewsContainers` / `contributes.views`)**
+- An Activity Bar container `brainrotRunners` with a webview view `brainrotRunners.sidebar` (`GameViewProvider`). It shares `GameSession` with the editor-tab `GamePanel`.
+- Registered with `retainContextWhenHidden: true` so a run survives switching sidebar views; the host sends `pause` when the view is hidden.
 
 **Settings (`contributes.configuration`)**
 - `brainrotRunners.sound` (boolean, default true)
@@ -131,7 +135,7 @@ BrainrotRunner/
 
 **Typed messages (`src/messages.ts`)**
 - Webview → Host: `ready`, `gameOver { score, coins, distance, durationMs }`, `requestHighScores`
-- Host → Webview: `init { highScores, settings }`, `highScores { list, newRank? }`
+- Host → Webview: `init { highScores, settings }`, `highScores { list, newRank? }`, `pause`
 
 ## 9. High Scores (`highScores.ts`)
 - Stored in `context.globalState` under the key `brainrotRunners.highScores`. This is local to the machine and persists across sessions. Settings Sync is **not** opted in (`setKeysForSync` is not called), so scores stay local.

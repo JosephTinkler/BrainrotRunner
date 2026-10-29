@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+  <!-- Three-lane road in perspective with a runner dot in the middle lane -->
+  <path d="M9 3 L3 21 M15 3 L21 21"/>
+  <path d="M11 4 L10 21 M13 4 L14 21" stroke-dasharray="2 2.4"/>
+  <circle cx="12" cy="15" r="2" fill="currentColor"/>
+</svg>

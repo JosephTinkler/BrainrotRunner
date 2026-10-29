@@ -2,6 +2,12 @@
 
 All notable changes to the "Brainrot Runners" extension are documented in this file.
 
+## [Unreleased]
+
+### Added
+
+- Activity Bar icon and sidebar view, so the game opens without the Command Palette. A run is paused (not lost) when the view is hidden.
+
 ## [0.0.1] - 2026-10-29
 
 ### Added

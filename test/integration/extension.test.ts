@@ -2,7 +2,7 @@ import * as assert from 'assert';
 import * as vscode from 'vscode';
 import type { BrainrotRunnersApi } from '../../src/extension';
 
-const EXTENSION_ID = 'brainrot-dev.brainrot-runners';
+const EXTENSION_ID = 'JosephTinkler.brainrot-runners';
 
 function findGameTab(): vscode.Tab | undefined {
   return vscode.window.tabGroups.all
@@ -32,6 +32,11 @@ describe('Extension', () => {
       tab = findGameTab();
     }
     assert.ok(tab, 'a brainrotRunners.game webview tab should be open');
+  });
+
+  it('sidebar view can be focused', async () => {
+    // VS Code generates `<viewId>.focus` for every contributed view; it rejects if the view is unknown.
+    await vscode.commands.executeCommand('brainrotRunners.sidebar.focus');
   });
 
   it('high scores can be submitted and reset', async () => {

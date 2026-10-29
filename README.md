@@ -1,14 +1,16 @@
 # Brainrot Runners
 
-Brainrot Runners is an original endless 3-lane runner that plays inside a VS Code editor tab. Dodge fences, banners and carts, collect brain cells, and keep going while the game gets faster the longer you survive. Your best runs are saved locally as high scores.
+Brainrot Runners is an original endless 3-lane runner that plays right inside VS Code, in its own Activity Bar sidebar or in an editor tab. Dodge fences, banners and carts, collect brain cells, and keep going while the game gets faster the longer you survive. Your best runs are saved locally as high scores.
 
 > Screenshot coming soon
 
 ## How to play
 
-Open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run one of these commands:
+Click the **Brainrot Runners** icon in the Activity Bar to open the game in the sidebar, like any other extension. Use the button at the top of the view to pop it out into an editor tab, or drag the view to the bottom panel or secondary sidebar if you want more room.
 
-- **Brainrot Runners: Play** opens the game.
+You can also open the Command Palette (`Ctrl+Shift+P` / `Cmd+Shift+P`) and run one of these commands:
+
+- **Brainrot Runners: Play** opens the game in an editor tab.
 - **Brainrot Runners: Show High Scores** opens the game on the high-score screen.
 - **Brainrot Runners: Reset High Scores** clears your saved scores (after a confirmation).
 

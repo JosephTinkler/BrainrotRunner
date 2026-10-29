@@ -91,6 +91,9 @@ export class GameController {
         this.deps.ui.updateHighScores(msg.list, msg.newRank);
         break;
       }
+      case 'pause':
+        this.onVisibilityHidden();
+        break;
     }
   }
 
