@@ -7,6 +7,8 @@ import type { GameState, InputAction, Lane } from '../../webview/game/types';
 const DT = CONFIG.FIXED_DT;
 const LOOK_AHEAD = 15; // the bot reacts to obstacles this close in its own lane
 const CHOICE_AHEAD = 30; // and prefers lanes that stay clear this far ahead
+const EVADE_AHEAD = 6; // and jumps or slides an obstacle this close when it cannot change lane
+const STEP_AHEAD = 8; // a lane it steps through must be clear this far ahead (oncoming trains close fast)
 
 function runFrames(
   state: GameState,
@@ -29,6 +31,18 @@ function laneBlocked(state: GameState, lane: Lane, ahead: number): boolean {
   });
 }
 
+/** Jumps a low fence or slides under a high bar in the current lane when no lane change works. */
+function evade(state: GameState): InputAction[] {
+  const here = state.obstacles.filter((o) => {
+    if (o.lane !== state.player.lane) return false;
+    return o.z + o.depth / 2 > -CONFIG.PLAYER_HALF_DEPTH && o.z - o.depth / 2 < EVADE_AHEAD;
+  });
+  if (here.length !== 1) return [];
+  if (here[0].kind === 'low') return ['jump'];
+  if (here[0].kind === 'high') return ['slide'];
+  return [];
+}
+
 /**
  * Simple bot: if the committed lane has an obstacle within LOOK_AHEAD, step towards the nearest
  * lane that is clear for the longer CHOICE_AHEAD horizon (falling back to the short one). It keeps
@@ -42,7 +56,11 @@ function botActions(state: GameState): InputAction[] {
   if (lanes.length === 0) {
     lanes = CONFIG.LANES.filter((l) => !laneBlocked(state, l, LOOK_AHEAD)).sort(byDistance);
   }
-  if (lanes.length === 0) return [];
+  if (lanes.length === 0) return evade(state);
+  // Lanes are changed one step at a time, so the lane in between must be passable right now.
+  // Trains are long, so a neighbour lane can still be occupied by a train that has passed.
+  const step = (lanes[0] < cur ? cur - 1 : cur + 1) as Lane;
+  if (laneBlocked(state, step, STEP_AHEAD)) return evade(state);
   return [lanes[0] < cur ? 'left' : 'right'];
 }
 
@@ -126,6 +144,25 @@ describe('update running behaviour', () => {
 
     const over = update(stillCrashed, [], 0.31);
     expect(over.phase).toBe('gameover');
+  });
+
+  it('keeps a train whose tail is still on screen and removes it once the tail passes', () => {
+    const train = { id: 998, kind: 'block' as const, lane: 1 as const, depth: 10 };
+    const base = createInitialState(1, 'running');
+    // Centre is past DESPAWN_Z but the tail (z + 5) is not.
+    const kept = update(
+      { ...base, obstacles: [{ ...train, z: CONFIG.DESPAWN_Z - 2 }], nextId: 1000 },
+      [],
+      DT,
+    );
+    expect(kept.obstacles.some((o) => o.id === 998)).toBe(true);
+    // Tail is past DESPAWN_Z.
+    const gone = update(
+      { ...base, obstacles: [{ ...train, z: CONFIG.DESPAWN_Z - 6 }], nextId: 1000 },
+      [],
+      DT,
+    );
+    expect(gone.obstacles.some((o) => o.id === 998)).toBe(false);
   });
 
   it('a run with no input crashes within 60 s', () => {

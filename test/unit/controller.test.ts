@@ -436,3 +436,49 @@ describe('GameController tick', () => {
     expect(controller.state.time).toBeLessThanOrEqual(0.25 + CONFIG.FIXED_DT);
   });
 });
+
+describe('GameController mute', () => {
+  it('toggles sound, posts setSound and notifies onSoundChanged', () => {
+    const onSoundChanged = vi.fn();
+    const { controller, sfx, posted } = setup({ onSoundChanged });
+    init(controller);
+    expect(onSoundChanged).toHaveBeenLastCalledWith(true);
+
+    controller.toggleSound();
+    expect(controller.settings.sound).toBe(false);
+    expect(sfx.setEnabled).toHaveBeenLastCalledWith(false);
+    expect(posted).toContainEqual({ type: 'setSound', on: false });
+    expect(onSoundChanged).toHaveBeenLastCalledWith(false);
+
+    controller.toggleSound();
+    expect(controller.settings.sound).toBe(true);
+    expect(sfx.setEnabled).toHaveBeenLastCalledWith(true);
+    expect(posted).toContainEqual({ type: 'setSound', on: true });
+  });
+
+  it('init reports the saved sound setting', () => {
+    const onSoundChanged = vi.fn();
+    const { controller } = setup({ onSoundChanged });
+    init(controller, { settings: { sound: false, reducedMotion: false } });
+    expect(onSoundChanged).toHaveBeenCalledWith(false);
+  });
+
+  it('the mute command works on the title screen without changing the phase', () => {
+    const { controller, posted } = setup();
+    init(controller);
+    controller.onCommand('mute');
+    expect(controller.state.phase).toBe('title');
+    expect(posted).toContainEqual({ type: 'setSound', on: false });
+  });
+
+  it('the mute command works mid-run without changing the phase', () => {
+    const { controller, sfx, posted } = setup();
+    init(controller);
+    controller.onCommand('confirm');
+    controller.tick(0.1);
+    controller.onCommand('mute');
+    expect(controller.state.phase).toBe('running');
+    expect(sfx.setEnabled).toHaveBeenLastCalledWith(false);
+    expect(posted).toContainEqual({ type: 'setSound', on: false });
+  });
+});

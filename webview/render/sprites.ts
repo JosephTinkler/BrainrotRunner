@@ -4,6 +4,7 @@
 // of pixels per world unit at that depth (projection scale * pixelsPerUnit(viewport)). Sprites
 // are drawn in world-unit geometry multiplied by `scale`. `y` grows downwards on screen.
 import type { ObstacleKind } from '../game/types';
+import { CAMERA, project, type Viewport } from './projection';
 
 export const PALETTE = {
   hotPink: '#ff2e9a',
@@ -29,25 +30,20 @@ export const SPRITE_GEOM = {
   player: { width: 1.2, height: 1.3, slideHeight: 0.62 },
   low: { bottom: 0, height: 0.6, width: 1.9 },
   high: { bottom: 1.0, height: 0.9, width: 2.0 },
-  block: { bottom: 0, height: 2.0, width: 1.7 },
-  moving: { bottom: 0, height: 1.9, width: 1.8 },
+  block: { bottom: 0, height: 2.3, width: 1.8 },
+  moving: { bottom: 0, height: 2.3, width: 1.8 },
   coin: { radius: 0.28 },
 } as const;
 
-export const OBSTACLE_GEOM: Record<ObstacleKind, { bottom: number; height: number; width: number }> =
-  {
-    low: SPRITE_GEOM.low,
-    high: SPRITE_GEOM.high,
-    block: SPRITE_GEOM.block,
-    moving: SPRITE_GEOM.moving,
-  };
-
-export interface PlayerDrawOpts {
-  sliding: boolean;
-  airborne: boolean;
-  t: number; // real seconds, drives idle animation
-  reducedMotion?: boolean;
-}
+export const OBSTACLE_GEOM: Record<
+  ObstacleKind,
+  { bottom: number; height: number; width: number }
+> = {
+  low: SPRITE_GEOM.low,
+  high: SPRITE_GEOM.high,
+  block: SPRITE_GEOM.block,
+  moving: SPRITE_GEOM.moving,
+};
 
 /** Soft elliptical ground shadow, no gradients so it stays cheap. */
 export function drawShadow(
@@ -66,108 +62,14 @@ export function drawShadow(
   ctx.restore();
 }
 
-/** The bouncy pink brain blob with googly eyes and tiny sneakers. (x, y) is the feet anchor. */
-export function drawPlayer(
+/** Low barrier with hazard stripes and a glowing phone screen on top. (x, y) is the base centre. */
+function drawFence(
   ctx: CanvasRenderingContext2D,
   x: number,
   y: number,
-  scale: number,
-  opts: PlayerDrawOpts,
+  k: number,
+  t: number,
 ): void {
-  const g = SPRITE_GEOM.player;
-  const bobAmp = opts.reducedMotion ? 0 : 0.035;
-  const bob = !opts.airborne && !opts.sliding ? Math.abs(Math.sin(opts.t * 11)) * bobAmp : 0;
-  const bodyH = (opts.sliding ? g.slideHeight : g.height) * scale;
-  const bodyW = (opts.sliding ? g.width * 1.25 : g.width) * scale;
-  const cx = x;
-  const baseY = y - bob * scale;
-
-  ctx.save();
-
-  // Tiny sneakers, tucked up while airborne.
-  const shoeY = baseY - (opts.airborne ? 0.22 : 0.02) * scale;
-  const shoeR = 0.13 * scale;
-  ctx.fillStyle = PALETTE.cyan;
-  for (const side of [-1, 1]) {
-    ctx.beginPath();
-    ctx.ellipse(cx + side * 0.27 * scale, shoeY, shoeR * 1.4, shoeR, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.fillStyle = PALETTE.yellow;
-  for (const side of [-1, 1]) {
-    ctx.fillRect(
-      cx + side * 0.27 * scale - shoeR * 0.6,
-      shoeY - shoeR * 0.2,
-      shoeR * 0.5,
-      shoeR * 0.4,
-    );
-  }
-
-  // Brain body: a pink blob, stretched a little when airborne and squashed when sliding.
-  const stretch = opts.airborne ? 1.06 : 1;
-  const bodyRH = (bodyH * stretch) / 2;
-  const centerY = baseY - bodyRH - 0.2 * scale;
-  ctx.fillStyle = PALETTE.hotPink;
-  ctx.beginPath();
-  ctx.ellipse(cx, centerY, bodyW / 2, bodyRH, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  // Brain wrinkles.
-  ctx.strokeStyle = '#c4136f';
-  ctx.lineWidth = Math.max(1, 0.05 * scale);
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  ctx.moveTo(cx - bodyW * 0.3, centerY + bodyH * 0.12);
-  ctx.quadraticCurveTo(cx - bodyW * 0.1, centerY + bodyH * 0.02, cx, centerY + bodyH * 0.14);
-  ctx.quadraticCurveTo(
-    cx + bodyW * 0.12,
-    centerY + bodyH * 0.26,
-    cx + bodyW * 0.3,
-    centerY + bodyH * 0.12,
-  );
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(cx - bodyW * 0.2, centerY - bodyH * 0.18);
-  ctx.quadraticCurveTo(cx, centerY - bodyH * 0.3, cx + bodyW * 0.2, centerY - bodyH * 0.16);
-  ctx.stroke();
-
-  if (!opts.sliding) {
-    // Googly eyes: white sclera, black pupil that jitters around the centre.
-    const eyeR = 0.2 * scale;
-    const eyeY = centerY - bodyH * 0.12;
-    const jx = opts.reducedMotion ? 0 : Math.sin(opts.t * 7) * 0.05 * scale;
-    const jy = opts.reducedMotion ? 0 : Math.cos(opts.t * 5) * 0.04 * scale;
-    for (const side of [-1, 1]) {
-      const ex = cx + side * bodyW * 0.22;
-      ctx.fillStyle = PALETTE.white;
-      ctx.beginPath();
-      ctx.arc(ex, eyeY, eyeR, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = PALETTE.ink;
-      ctx.lineWidth = Math.max(1, 0.04 * scale);
-      ctx.stroke();
-      ctx.fillStyle = PALETTE.ink;
-      ctx.beginPath();
-      ctx.arc(ex + jx, eyeY + jy, eyeR * 0.45, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  } else {
-    // Squinting eyes while sliding.
-    ctx.strokeStyle = PALETTE.ink;
-    ctx.lineWidth = Math.max(1, 0.05 * scale);
-    ctx.beginPath();
-    ctx.moveTo(cx - bodyW * 0.32, centerY);
-    ctx.lineTo(cx - bodyW * 0.12, centerY + 0.03 * scale);
-    ctx.moveTo(cx + bodyW * 0.32, centerY);
-    ctx.lineTo(cx + bodyW * 0.12, centerY + 0.03 * scale);
-    ctx.stroke();
-  }
-
-  ctx.restore();
-}
-
-/** Low barrier with hazard stripes and a glowing phone screen on top. (x, y) is the base centre. */
-function drawFence(ctx: CanvasRenderingContext2D, x: number, y: number, k: number, t: number): void {
   const g = SPRITE_GEOM.low;
   const w = g.width * k;
   const h = g.height * k;
@@ -242,93 +144,219 @@ function drawBanner(ctx: CanvasRenderingContext2D, x: number, y: number, k: numb
   ctx.fillText('RATIO', x, top + h / 2 + h * 0.02);
 }
 
-/** Tall purple block with a cringing face. (x, y) is the base centre. */
-function drawBlock(
-  ctx: CanvasRenderingContext2D,
-  x: number,
-  y: number,
-  k: number,
-  geom: { height: number; width: number },
-): void {
-  const w = geom.width * k;
-  const h = geom.height * k;
-  const left = x - w / 2;
-  const top = y - h;
+const TRAIN_STYLES = {
+  // Parked Train: purple livery with a cringing face on the front.
+  block: {
+    front: PALETTE.brickPurple,
+    side: PALETTE.brickShade,
+    top: '#9a66ff',
+    edge: PALETTE.acidGreen,
+    window: PALETTE.ink,
+  },
+  // Sigma Express: pink livery with headlights and a destination sign.
+  moving: {
+    front: PALETTE.hotPink,
+    side: '#b3186b',
+    top: '#ff8cc6',
+    edge: PALETTE.cyan,
+    window: PALETTE.yellow,
+  },
+} as const;
 
-  ctx.fillStyle = PALETTE.brickPurple;
-  ctx.fillRect(left, top, w, h);
-  // Brick courses.
-  ctx.strokeStyle = PALETTE.brickShade;
-  ctx.lineWidth = Math.max(1, 0.05 * k);
-  for (let r = 1; r < 5; r++) {
-    const ry = top + (h * r) / 5;
-    ctx.beginPath();
-    ctx.moveTo(left, ry);
-    ctx.lineTo(left + w, ry);
+export type TrainKind = keyof typeof TRAIN_STYLES;
+type Pt = { x: number; y: number };
+
+const CAR_LENGTH = 5; // world units per car, used for gap lines and windows
+
+function fillPoly(
+  ctx: CanvasRenderingContext2D,
+  pts: readonly Pt[],
+  fill: string,
+  stroke: string | null,
+  lineWidth: number,
+): void {
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+  ctx.closePath();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  if (stroke) {
+    ctx.strokeStyle = stroke;
+    ctx.lineWidth = lineWidth;
     ctx.stroke();
   }
-  // Neon outline.
-  ctx.strokeStyle = PALETTE.acidGreen;
-  ctx.lineWidth = Math.max(2, 0.08 * k);
-  ctx.strokeRect(left, top, w, h);
-
-  // Cringe face: squinting eyes and a wobbly mouth.
-  const fy = top + h * 0.38;
-  ctx.strokeStyle = PALETTE.white;
-  ctx.lineWidth = Math.max(2, 0.07 * k);
-  ctx.beginPath();
-  ctx.moveTo(x - w * 0.3, fy - h * 0.04);
-  ctx.lineTo(x - w * 0.1, fy + h * 0.02);
-  ctx.moveTo(x + w * 0.3, fy - h * 0.04);
-  ctx.lineTo(x + w * 0.1, fy + h * 0.02);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x - w * 0.28, fy + h * 0.2);
-  ctx.quadraticCurveTo(x - w * 0.14, fy + h * 0.12, x, fy + h * 0.2);
-  ctx.quadraticCurveTo(x + w * 0.14, fy + h * 0.28, x + w * 0.28, fy + h * 0.2);
-  ctx.stroke();
 }
 
-/** Block on wheels with headlights. */
-function drawCart(ctx: CanvasRenderingContext2D, x: number, y: number, k: number, t: number): void {
-  const g = SPRITE_GEOM.moving;
-  const w = g.width * k;
-  const h = g.height * k;
-  const left = x - w / 2;
-  const wheelR = h * 0.12;
-  const bodyBottom = y - h * 0.22;
+/**
+ * A train as a shaded 3D box spanning world depth [zNear, zFar] in a lane. Faces are painted back
+ * to front: the side that faces the screen centre (none for the centre lane), the top, then the
+ * front. `clipZ` is the nearest depth that may be projected; a box crossing it is cut there.
+ */
+export function drawTrain(
+  ctx: CanvasRenderingContext2D,
+  vp: Viewport,
+  ppu: number,
+  lane: number,
+  zNear: number,
+  zFar: number,
+  style: TrainKind,
+  t: number,
+  clipZ: number,
+): void {
+  if (zFar <= clipZ) return;
+  const g = SPRITE_GEOM[style];
+  const st = TRAIN_STYLES[style];
+  const half = g.width / 2 / CAMERA.LANE_WIDTH; // project() takes lane units
+  const xl = lane - half;
+  const xr = lane + half;
+  const h = g.height;
+  const zN = Math.max(zNear, clipZ);
+  const frontVisible = zNear >= clipZ;
+  const pr = (x: number, y: number, z: number): Pt => project(x, y, z, vp);
 
-  drawBlock(ctx, x, bodyBottom, k, { height: g.height - 0.22, width: g.width });
+  const kFront = project(lane, 0, zN, vp).scale * ppu;
+  const edgeW = Math.max(1.5, 0.06 * kFront);
+  // Car layout comes from the full length so it stays put while the box is clipped.
+  const cars = Math.max(1, Math.round((zFar - zNear) / CAR_LENGTH));
+  const carLen = (zFar - zNear) / cars;
+
+  // Side face towards the screen centre.
+  if (lane !== 0) {
+    const sx = lane < 0 ? xr : xl;
+    const side = (z: number, y: number): Pt => pr(sx, y, z);
+    fillPoly(
+      ctx,
+      [side(zN, 0), side(zFar, 0), side(zFar, h), side(zN, h)],
+      st.side,
+      st.edge,
+      edgeW,
+    );
+
+    for (let c = 0; c < cars; c++) {
+      const z0 = zNear + c * carLen;
+      // Gap line between cars.
+      if (c > 0 && z0 > zN) {
+        const a = side(z0, 0);
+        const b = side(z0, h);
+        ctx.strokeStyle = st.edge;
+        ctx.lineWidth = Math.max(1, edgeW * 0.6);
+        ctx.beginPath();
+        ctx.moveTo(a.x, a.y);
+        ctx.lineTo(b.x, b.y);
+        ctx.stroke();
+      }
+      // Three windows per car.
+      for (let i = 0; i < 3; i++) {
+        const wa = Math.max(z0 + carLen * (0.1 + i * 0.28), zN);
+        const wb = z0 + carLen * (0.31 + i * 0.28);
+        if (wb <= zN) continue;
+        fillPoly(
+          ctx,
+          [side(wa, h * 0.52), side(wb, h * 0.52), side(wb, h * 0.84), side(wa, h * 0.84)],
+          st.window,
+          null,
+          0,
+        );
+      }
+      // Two bogies (dark wheel sets) at the base of the car.
+      for (const u of [0.2, 0.8]) {
+        const z = z0 + carLen * u;
+        if (z < zN) continue;
+        const mid = side(z, 0.22);
+        const a = side(z - 0.5, 0.22);
+        const b = side(z + 0.5, 0.22);
+        const rx = Math.max(1, Math.hypot(b.x - a.x, b.y - a.y) / 2);
+        ctx.fillStyle = PALETTE.ink;
+        ctx.beginPath();
+        ctx.ellipse(mid.x, mid.y, rx, 0.22 * project(sx, 0, z, vp).scale * ppu, 0, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  // Top face, lighter, with a gap line across it per car boundary.
+  fillPoly(
+    ctx,
+    [pr(xl, h, zN), pr(xr, h, zN), pr(xr, h, zFar), pr(xl, h, zFar)],
+    st.top,
+    st.edge,
+    edgeW,
+  );
+  ctx.strokeStyle = st.edge;
+  ctx.lineWidth = Math.max(1, edgeW * 0.6);
+  for (let c = 1; c < cars; c++) {
+    const z = zNear + c * carLen;
+    if (z <= zN) continue;
+    const a = pr(xl, h, z);
+    const b = pr(xr, h, z);
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(b.x, b.y);
+    ctx.stroke();
+  }
+
+  // A clipped box has no front face: its real front is behind the camera.
+  if (!frontVisible) return;
+
+  // Front face at full colour.
+  const bl = pr(xl, 0, zN);
+  const tr = pr(xr, h, zN);
+  const fw = tr.x - bl.x;
+  const fh = bl.y - tr.y;
+  const cx = (bl.x + tr.x) / 2;
+  ctx.fillStyle = st.front;
+  ctx.fillRect(bl.x, tr.y, fw, fh);
+  ctx.strokeStyle = st.edge;
+  ctx.lineWidth = edgeW;
+  ctx.strokeRect(bl.x, tr.y, fw, fh);
+
+  if (style === 'block') {
+    // Cringe face: squinting eyes and a wobbly mouth.
+    const fy = tr.y + fh * 0.38;
+    ctx.strokeStyle = PALETTE.white;
+    ctx.lineWidth = Math.max(2, 0.07 * kFront);
+    ctx.beginPath();
+    ctx.moveTo(cx - fw * 0.3, fy - fh * 0.04);
+    ctx.lineTo(cx - fw * 0.1, fy + fh * 0.02);
+    ctx.moveTo(cx + fw * 0.3, fy - fh * 0.04);
+    ctx.lineTo(cx + fw * 0.1, fy + fh * 0.02);
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(cx - fw * 0.28, fy + fh * 0.2);
+    ctx.quadraticCurveTo(cx - fw * 0.14, fy + fh * 0.12, cx, fy + fh * 0.2);
+    ctx.quadraticCurveTo(cx + fw * 0.14, fy + fh * 0.28, cx + fw * 0.28, fy + fh * 0.2);
+    ctx.stroke();
+    return;
+  }
+
+  // Flickering destination sign above the windscreen.
+  const flicker = Math.sin(t * 23) > -0.6 || Math.sin(t * 7) > 0.8;
+  const signH = fh * 0.16;
+  const signY = tr.y + fh * 0.1;
+  ctx.fillStyle = PALETTE.ink;
+  ctx.fillRect(cx - fw * 0.32, signY, fw * 0.64, signH);
+  if (flicker) {
+    ctx.fillStyle = PALETTE.acidGreen;
+    ctx.font = `900 ${Math.max(6, signH * 0.75)}px "Trebuchet MS", system-ui, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('SIGMA', cx, signY + signH / 2);
+  }
 
   // Headlights: two bright discs with a pale halo (no shadowBlur).
-  for (const side of [-1, 1]) {
-    const hx = x + side * w * 0.3;
-    const hy = bodyBottom - h * 0.62;
+  const lampR = fh * 0.07;
+  for (const sd of [-1, 1]) {
+    const hx = cx + sd * fw * 0.3;
+    const hy = tr.y + fh * 0.7;
     ctx.fillStyle = 'rgba(255, 232, 61, 0.35)';
     ctx.beginPath();
-    ctx.arc(hx, hy, wheelR * 1.4, 0, Math.PI * 2);
+    ctx.arc(hx, hy, lampR * 2, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = PALETTE.yellow;
     ctx.beginPath();
-    ctx.arc(hx, hy, wheelR * 0.6, 0, Math.PI * 2);
+    ctx.arc(hx, hy, lampR, 0, Math.PI * 2);
     ctx.fill();
-  }
-
-  // Wheels with spinning spokes.
-  for (const side of [-1, 1]) {
-    const wx = left + w * (side < 0 ? 0.22 : 0.78);
-    const wy = y - wheelR;
-    ctx.fillStyle = PALETTE.ink;
-    ctx.beginPath();
-    ctx.arc(wx, wy, wheelR, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = PALETTE.cyan;
-    ctx.lineWidth = Math.max(1, 0.04 * k);
-    const a = t * 10;
-    ctx.beginPath();
-    ctx.moveTo(wx + Math.cos(a) * wheelR * 0.8, wy + Math.sin(a) * wheelR * 0.8);
-    ctx.lineTo(wx - Math.cos(a) * wheelR * 0.8, wy - Math.sin(a) * wheelR * 0.8);
-    ctx.stroke();
   }
 }
 
@@ -350,11 +378,8 @@ export function drawObstacle(
       drawBanner(ctx, x, y, scale);
       break;
     case 'block':
-      drawBlock(ctx, x, y, scale, SPRITE_GEOM.block);
-      break;
     case 'moving':
-      drawCart(ctx, x, y, scale, t);
-      break;
+      break; // trains are 3D boxes, see drawTrain
   }
   ctx.restore();
 }

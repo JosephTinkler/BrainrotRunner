@@ -92,6 +92,7 @@ describe('Ui', () => {
           expect.stringContaining('Space: jump'),
           expect.stringContaining('S: slide'),
           expect.stringContaining('P / Esc'),
+          expect.stringContaining('M: mute'),
           expect.stringContaining('Drag to swipe'),
         ]),
       );

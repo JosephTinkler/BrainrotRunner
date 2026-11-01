@@ -31,6 +31,8 @@ export interface ControllerDeps {
   seed(): number;
   /** Optional: toggles the reduced-motion body class (applied on init). */
   setReducedMotion?(on: boolean): void;
+  /** Optional: called with the sound state on init and whenever it is toggled (updates the mute button). */
+  onSoundChanged?(on: boolean): void;
 }
 
 const DEFAULT_SETTINGS: Settings = { sound: true, reducedMotion: false };
@@ -73,6 +75,7 @@ export class GameController {
         this.best = bestScore(msg.highScores);
         this.deps.sfx.setEnabled(msg.settings.sound);
         this.deps.setReducedMotion?.(msg.settings.reducedMotion);
+        this.deps.onSoundChanged?.(msg.settings.sound);
         if (msg.view === 'highScores') {
           // Opening the table over a live run abandons that run, so it never keeps ticking behind it.
           if (this.isActive()) this.quitToTitle();
@@ -127,7 +130,19 @@ export class GameController {
           this.startRun();
         }
         break;
+      case 'mute':
+        this.toggleSound();
+        break;
     }
+  }
+
+  /** Flips sound on or off, tells the host to save it, and updates the mute button. Works in any phase. */
+  toggleSound(): void {
+    const on = !this.settings.sound;
+    this.settings = { ...this.settings, sound: on };
+    this.deps.sfx.setEnabled(on);
+    this.deps.post({ type: 'setSound', on });
+    this.deps.onSoundChanged?.(on);
   }
 
   /** Auto-pause when the panel is hidden or loses focus. */

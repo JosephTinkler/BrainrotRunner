@@ -81,6 +81,31 @@ describe('render (smoke)', () => {
     expect(() => render(makeDummy(), state, opts())).not.toThrow();
   });
 
+  it('renders long trains in every lane, including one spanning the camera', () => {
+    const train = (id: number, kind: ObstacleKind, lane: -1 | 0 | 1, z: number, depth: number) => ({
+      id,
+      kind,
+      lane,
+      z,
+      depth,
+    });
+    const state: GameState = {
+      ...withContent(startRun(42), 'running'),
+      obstacles: [
+        train(1, 'block', -1, 20, 10),
+        train(2, 'moving', 0, 30, 8),
+        train(3, 'block', 1, 40, 10),
+        train(4, 'moving', -1, -3, 10),
+        train(5, 'block', 0, -3, 10),
+        train(6, 'moving', 1, -3, 10),
+        train(7, 'block', 1, -8, 10), // tail still on screen
+      ],
+    };
+    for (const reducedMotion of [false, true]) {
+      expect(() => render(makeDummy(), state, opts({ reducedMotion }))).not.toThrow();
+    }
+  });
+
   it('renders the crashed phase with and without reduced motion', () => {
     const state = withContent(startRun(42), 'crashed');
     expect(() => render(makeDummy(), state, opts())).not.toThrow();

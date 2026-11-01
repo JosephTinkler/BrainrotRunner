@@ -81,6 +81,7 @@ export class Ui {
       '↑ / W / Space: jump',
       '↓ / S: slide',
       'P / Esc: pause',
+      'M: mute',
       'Drag to swipe',
     ]) {
       controls.appendChild(this.el('li', undefined, line));

@@ -1,7 +1,7 @@
 // Keyboard and pointer (drag / tap) mapping to game actions. DOM-free so it is testable in node.
 import type { InputAction } from './game/types';
 
-export type Command = 'pause' | 'confirm' | 'restart';
+export type Command = 'pause' | 'confirm' | 'restart' | 'mute';
 
 export interface KeyMapping {
   action?: InputAction;
@@ -37,6 +37,9 @@ export function keyToInput(key: string): KeyMapping | null {
     case 'r':
     case 'R':
       return { command: 'restart' };
+    case 'm':
+    case 'M':
+      return { command: 'mute' };
     case 'Enter':
       return { command: 'confirm' };
     default:

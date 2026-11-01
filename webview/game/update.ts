@@ -95,7 +95,8 @@ export function update(state: GameState, actions: InputAction[], dt: number): Ga
     })
     .filter((c) => !c.collected && c.z >= CONFIG.DESPAWN_Z);
 
-  const allObstacles = obstacles.filter((o) => o.z >= CONFIG.DESPAWN_Z);
+  // Long trains despawn by their tail so the back half does not vanish while still on screen.
+  const allObstacles = obstacles.filter((o) => o.z + o.depth / 2 >= CONFIG.DESPAWN_Z);
 
   // Spawn rows that have come within SPAWN_DISTANCE.
   let rngState = state.rngState;

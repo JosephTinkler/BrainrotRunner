@@ -87,6 +87,12 @@ export class GameSession {
       case 'requestHighScores':
         this.post({ type: 'highScores', list: this.store.list() });
         break;
+      case 'setSound':
+        if (typeof message.on !== 'boolean') break;
+        void vscode.workspace
+          .getConfiguration('brainrotRunners')
+          .update('sound', message.on, vscode.ConfigurationTarget.Global);
+        break;
     }
   }
 }

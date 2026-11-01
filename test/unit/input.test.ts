@@ -24,6 +24,8 @@ describe('keyToInput', () => {
     ['Escape', { command: 'pause' }],
     ['r', { command: 'restart' }],
     ['R', { command: 'restart' }],
+    ['m', { command: 'mute' }],
+    ['M', { command: 'mute' }],
     ['Enter', { command: 'confirm' }],
   ])('maps %s', (key, expected) => {
     expect(keyToInput(key)).toEqual(expected);

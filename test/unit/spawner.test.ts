@@ -92,6 +92,23 @@ describe('generateRow', () => {
   });
 });
 
+describe('train depths', () => {
+  it('parked trains are 10 deep and oncoming trains 8 deep, other kinds stay short', () => {
+    const depths: Record<string, Set<number>> = {};
+    for (const tier of TIERS) {
+      for (let seed = 1; seed <= 200; seed++) {
+        for (const row of rowsFor(tier, seed)) {
+          for (const o of row.obstacles) (depths[o.kind] ??= new Set()).add(o.depth);
+        }
+      }
+    }
+    expect([...depths.block]).toEqual([10]);
+    expect([...depths.moving]).toEqual([8]);
+    expect([...depths.low]).toEqual([1]);
+    expect([...depths.high]).toEqual([1]);
+  });
+});
+
 describe('rowGap floor', () => {
   it('is at least speed * MIN_GAP_TIME for speeds 0..MAX', () => {
     for (let s = 0; s <= CONFIG.MAX_SPEED; s += 0.1) {

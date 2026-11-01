@@ -48,6 +48,13 @@ describe('hitsObstacle', () => {
     expect(hitsObstacle(grounded(), obs('moving'))).toBe(true);
   });
 
+  it('a long train whose centre is ahead still hits the player it overlaps', () => {
+    // Spans z in [-1, 9], so the player at z 0 is inside it.
+    expect(hitsObstacle(grounded(), obs('block', 0, 4, 10))).toBe(true);
+    expect(hitsObstacle(grounded(), obs('moving', 0, 4, 8))).toBe(true);
+    expect(hitsObstacle(grounded(1), obs('block', 0, 4, 10))).toBe(false);
+  });
+
   it('adjacent lanes never collide', () => {
     expect(hitsObstacle(grounded(-1), obs('block', 0))).toBe(false);
     expect(hitsObstacle(grounded(1), obs('block', 0))).toBe(false);

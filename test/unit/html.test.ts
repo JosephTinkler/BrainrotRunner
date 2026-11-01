@@ -28,6 +28,14 @@ describe('buildHtml', () => {
     expect(html).toContain('<canvas id="game">');
     expect(html).toContain('<div id="ui">');
   });
+
+  it('includes the mute button outside the ui root', () => {
+    const html = buildHtml(OPTIONS);
+    expect(html).toContain(
+      '<button id="mute" type="button" aria-label="Mute sound" aria-pressed="false">',
+    );
+    expect(html.indexOf('id="mute"')).toBeGreaterThan(html.indexOf('<div id="ui"></div>'));
+  });
 });
 
 describe('getNonce', () => {

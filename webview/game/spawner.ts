@@ -14,8 +14,8 @@ const LANES: readonly Lane[] = CONFIG.LANES;
 const DEPTH: Record<ObstacleKind, number> = {
   low: 1.0,
   high: 1.0,
-  block: 1.4,
-  moving: 1.4,
+  block: 10, // Parked Train: two cars long
+  moving: 8, // Sigma Express
 };
 
 const T1_KINDS: readonly ObstacleKind[] = ['low', 'high', 'block'];

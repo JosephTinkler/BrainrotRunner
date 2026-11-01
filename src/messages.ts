@@ -21,7 +21,9 @@ export interface Settings {
 export type WebviewToHost =
   | { type: 'ready' }
   | { type: 'gameOver'; score: number; coins: number; distance: number; durationMs: number }
-  | { type: 'requestHighScores' };
+  | { type: 'requestHighScores' }
+  /** The player toggled sound; the host saves it to the `brainrotRunners.sound` setting. */
+  | { type: 'setSound'; on: boolean };
 
 /** Messages sent from the extension host to the webview. */
 export type HostToWebview =

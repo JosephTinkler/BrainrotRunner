@@ -9,6 +9,7 @@ const vscode = acquireVsCodeApi();
 
 const canvas = document.getElementById('game') as HTMLCanvasElement;
 const uiRoot = document.getElementById('ui') as HTMLElement;
+const muteButton = document.getElementById('mute') as HTMLButtonElement;
 const ctx = canvas.getContext('2d');
 
 /** Canvas size in CSS pixels plus the device pixel ratio, kept in step with the panel. */
@@ -46,8 +47,19 @@ const controller = new GameController({
   now: () => performance.now(),
   seed: () => Math.floor(Math.random() * 0x7fffffff),
   setReducedMotion: (on) => document.body.classList.toggle('reduced-motion', on),
+  onSoundChanged: (on) => {
+    muteButton.textContent = on ? '🔊' : '🔇';
+    muteButton.setAttribute('aria-pressed', String(!on));
+    muteButton.setAttribute('aria-label', on ? 'Mute sound' : 'Unmute sound');
+  },
 });
 Object.assign(uiHandlers, controller.uiHandlers());
+
+muteButton.addEventListener('click', () => {
+  controller.toggleSound();
+  // Drop focus so Space goes back to jumping instead of re-activating the button.
+  muteButton.blur();
+});
 
 window.addEventListener('message', (event: MessageEvent<HostToWebview>) => {
   controller.handleHostMessage(event.data);

@@ -10,9 +10,10 @@ import {
   SPRITE_GEOM,
   drawCoin,
   drawObstacle,
-  drawPlayer,
   drawShadow,
+  drawTrain,
 } from './sprites';
+import { STRIDE_K, drawPlayer, runPose } from './player';
 
 export interface RenderOptions {
   width: number; // CSS pixels
@@ -41,7 +42,13 @@ interface Shape {
 }
 
 const LAYER_SPEED = [0.25, 0.6, 1.1]; // px of parallax per world unit travelled
-const SHAPE_COLORS = [PALETTE.hotPink, PALETTE.cyan, PALETTE.yellow, PALETTE.electricPurple, PALETTE.acidGreen];
+const SHAPE_COLORS = [
+  PALETTE.hotPink,
+  PALETTE.cyan,
+  PALETTE.yellow,
+  PALETTE.electricPurple,
+  PALETTE.acidGreen,
+];
 
 /** Background shapes, generated once with a tiny fixed-seed PRNG so the layout is stable. */
 const SHAPES: readonly Shape[] = (() => {
@@ -162,11 +169,7 @@ function drawBackground(
   ctx.fillRect(0, horizonY - 1, w, 2);
 }
 
-function drawTrack(
-  ctx: CanvasRenderingContext2D,
-  vp: Viewport,
-  scroll: number,
-): void {
+function drawTrack(ctx: CanvasRenderingContext2D, vp: Viewport, scroll: number): void {
   // Checker boundaries sit at z = j * ROW_LEN - frac; their absolute parity comes from `a`.
   const frac = ((scroll % ROW_LEN) + ROW_LEN) % ROW_LEN;
   const base = Math.floor(scroll / ROW_LEN);
@@ -213,6 +216,11 @@ function drawTrack(
   line(1.5, PALETTE.cyan, 3);
 }
 
+/** Depth of the end of an item closest to the camera, used for draw ordering. */
+function nearEnd(item: Obstacle | Coin): number {
+  return 'kind' in item ? item.z - item.depth / 2 : item.z;
+}
+
 function drawItem(
   ctx: CanvasRenderingContext2D,
   vp: Viewport,
@@ -221,6 +229,11 @@ function drawItem(
   t: number,
 ): void {
   if ('kind' in item) {
+    if (item.kind === 'block' || item.kind === 'moving') {
+      const half = item.depth / 2;
+      drawTrain(ctx, vp, ppu, item.lane, item.z - half, item.z + half, item.kind, t, TRACK_NEAR_Z);
+      return;
+    }
     const geom = OBSTACLE_GEOM[item.kind];
     const ground = project(item.lane, 0, item.z, vp);
     const p = project(item.lane, geom.bottom, item.z, vp);
@@ -242,27 +255,37 @@ function drawPlayerAndShadow(
   ppu: number,
   realTime: number,
   reducedMotion: boolean,
+  scroll: number,
 ): void {
   const pl = state.player;
   const x = playerX(pl);
   const ground = project(x, 0, 0, vp);
   const k = ppu;
   const lift = Math.min(1, pl.y / CONFIG.JUMP_HEIGHT);
-  drawShadow(ctx, ground.x, ground.y, SPRITE_GEOM.player.width * 0.5 * k, 0.4 * (1 - 0.6 * lift));
+  const sliding = isSliding(pl);
+  const airborne = isAirborne(pl);
+  const phase = scroll * STRIDE_K;
+  // The shadow shrinks slightly as the body bobs up.
+  const bob = runPose(phase, { airborne, sliding, reducedMotion }).bob;
+  const pulse = 1 - bob * 1.2;
+  drawShadow(
+    ctx,
+    ground.x,
+    ground.y,
+    SPRITE_GEOM.player.width * 0.5 * k * pulse,
+    0.4 * (1 - 0.6 * lift) * pulse,
+  );
   const feet = project(x, pl.y, 0, vp);
   drawPlayer(ctx, feet.x, feet.y, k, {
-    sliding: isSliding(pl),
-    airborne: isAirborne(pl),
+    sliding,
+    airborne,
     t: realTime,
+    phase,
     reducedMotion,
   });
 }
 
-function drawHud(
-  ctx: CanvasRenderingContext2D,
-  state: GameState,
-  opts: RenderOptions,
-): void {
+function drawHud(ctx: CanvasRenderingContext2D, state: GameState, opts: RenderOptions): void {
   const { width: w, height: h } = opts;
   const best = Math.max(opts.best, state.score);
   const small = Math.min(Math.max(h * 0.035, 12), 20);
@@ -349,21 +372,24 @@ export function render(ctx: CanvasRenderingContext2D, state: GameState, opts: Re
   drawBackground(ctx, w, h, horizonY, scroll, opts.realTime, opts.reducedMotion);
   drawTrack(ctx, vp, scroll);
 
-  // Objects far to near. Items in front of the player (z > 0) are drawn before the player,
-  // items that have passed it (z <= 0) after it.
+  // Objects far to near by their near end (z - depth / 2; coins use z). Items whose near end is in
+  // front of the player (> 0) are drawn before the player, the rest after it. Trains are visible
+  // until their tail passes DESPAWN_Z.
   drawList.length = 0;
   for (const o of state.obstacles) {
-    if (o.z >= CONFIG.DESPAWN_Z && o.z <= CONFIG.SPAWN_DISTANCE) drawList.push(o);
+    if (o.z + o.depth / 2 >= CONFIG.DESPAWN_Z && o.z - o.depth / 2 <= CONFIG.SPAWN_DISTANCE) {
+      drawList.push(o);
+    }
   }
   for (const c of state.coinsList) {
     if (!c.collected && c.z >= CONFIG.DESPAWN_Z && c.z <= CONFIG.SPAWN_DISTANCE) drawList.push(c);
   }
-  drawList.sort((a, b) => b.z - a.z);
-  let split = drawList.findIndex((item) => item.z <= 0);
+  drawList.sort((a, b) => nearEnd(b) - nearEnd(a));
+  let split = drawList.findIndex((item) => nearEnd(item) <= 0);
   if (split < 0) split = drawList.length;
 
   for (let i = 0; i < split; i++) drawItem(ctx, vp, ppu, drawList[i], opts.realTime);
-  drawPlayerAndShadow(ctx, state, vp, ppu, opts.realTime, opts.reducedMotion);
+  drawPlayerAndShadow(ctx, state, vp, ppu, opts.realTime, opts.reducedMotion, scroll);
   for (let i = split; i < drawList.length; i++) drawItem(ctx, vp, ppu, drawList[i], opts.realTime);
 
   if (crashing && !opts.reducedMotion) {

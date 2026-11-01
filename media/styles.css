@@ -32,6 +32,40 @@ body {
   pointer-events: none;
 }
 
+/* Mute toggle: above #ui so it is clickable on every screen. */
+#mute {
+  position: fixed;
+  right: 12px;
+  bottom: 12px;
+  z-index: 10;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 2px solid var(--br-cyan);
+  border-radius: 10px;
+  background: var(--br-panel);
+  color: var(--br-cyan);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 0 10px rgba(0, 229, 255, 0.5);
+  transition:
+    transform 0.08s ease,
+    background-color 0.12s ease;
+}
+
+#mute:hover,
+#mute:focus-visible {
+  outline: none;
+  background: var(--br-cyan);
+  transform: scale(1.05);
+}
+
+#mute[aria-pressed='true'] {
+  border-color: var(--br-pink);
+  box-shadow: 0 0 10px rgba(255, 47, 179, 0.5);
+}
+
 /* ---- Overlay screens (title, high scores, pause, game over) ---- */
 
 :root {
@@ -339,5 +373,14 @@ body.reduced-motion *::after {
   .banner,
   .status {
     animation: none;
+  }
+
+  #mute {
+    transition: none;
+  }
+
+  #mute:hover,
+  #mute:focus-visible {
+    transform: none;
   }
 }

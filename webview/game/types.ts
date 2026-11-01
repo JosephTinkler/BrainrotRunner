@@ -1,7 +1,7 @@
 export type Lane = -1 | 0 | 1;
 
 // low = Doomscroll Fence (jump over), high = Ratio Banner (slide under),
-// block = Brick of Cringe (lane change only), moving = Sigma Cart
+// block = Parked Train (lane change only), moving = Sigma Express (oncoming train)
 export type ObstacleKind = 'low' | 'high' | 'block' | 'moving';
 
 export interface Obstacle {

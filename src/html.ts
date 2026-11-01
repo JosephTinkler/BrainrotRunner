@@ -27,6 +27,7 @@ export function buildHtml({ nonce, scriptUri, styleUri, cspSource }: HtmlOptions
 <body>
   <canvas id="game"></canvas>
   <div id="ui"></div>
+  <button id="mute" type="button" aria-label="Mute sound" aria-pressed="false">🔊</button>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;
